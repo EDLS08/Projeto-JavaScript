@@ -95,11 +95,10 @@ O aplicativo valida o conteúdo real dos arquivos de imagem e limita o tamanho a
 
 ## Testes e validação
 
-O repositório contém testes unitários para serviços, componentes, utilitários e guards. O relatório em [docs/RELATORIO.md](docs/RELATORIO.md) registra as verificações realizadas no projeto e também as limitações conhecidas. Testes em dispositivos físicos e em todos os navegadores não devem ser considerados concluídos sem execução específica nesses ambientes.
+O projeto inclui testes unitários para serviços, componentes, utilitários e guards. As verificações devem ser executadas no ambiente local e na integração contínua antes de cada publicação.
 
 ## Documentação
 
-- [Relatório técnico e decisões de implementação](docs/RELATORIO.md)
 - [Instruções do projeto para GitHub Copilot](.github/copilot-instructions.md)
 
 ## Deploy
