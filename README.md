@@ -1,110 +1,77 @@
-# Plume Notes
+# Plume Notes (Angular 20) — versão 100% local
 
-Aplicação de gerenciamento de notas pessoais desenvolvida com Angular 20 e TypeScript. A interface está em português do Brasil e oferece autenticação demonstrativa, organização de notas, busca, tags, arquivamento, anexos com recorte de imagens e tema claro/escuro.
+Gerenciador de notas, em português do Brasil, com cadastro, login, CRUD, busca, tags, arquivamento, imagens com recorte e tema claro/escuro.
+**Não usa backend nem API externa**: tudo fica no navegador (localStorage + IndexedDB).
 
-> **Importante:** este projeto funciona inteiramente no navegador. Não possui backend, sincronização entre dispositivos ou autenticação adequada para produção. Os dados ficam no armazenamento local do navegador e podem ser alterados por alguém com acesso ao dispositivo e às ferramentas de desenvolvimento.
+## Como executar
 
-## Funcionalidades
-
-- Cadastro, login e encerramento de sessão.
-- Criação, edição, arquivamento, restauração e exclusão de notas.
-- Busca textual e filtros por tags.
-- Separação das notas por conta local.
-- Anexos de imagem com visualização e recorte.
-- Importação de imagens do dispositivo ou por URL, respeitando as restrições de CORS.
-- Persistência de notas e preferências no `localStorage`; imagens no IndexedDB.
-- Interface responsiva para desktop, tablet e celular.
-- Tema claro e escuro compartilhado entre as telas.
-
-## Tecnologias
-
-- Angular 20
-- TypeScript 5.9
-- RxJS
-- Angular Router e Reactive Forms
-- Font Awesome
-- ngx-image-cropper
-- Web Crypto API (PBKDF2-SHA256)
-- localStorage e IndexedDB
-- Jasmine e Karma (configuração de testes do Angular)
-
-## Requisitos
-
-- Node.js 20 ou superior
-- npm compatível com a versão do Node.js
-- Navegador moderno
-
-A Web Crypto API exige contexto seguro: execute em `localhost` ou por HTTPS.
-
-## Executar localmente
+Requisitos: Node.js 20+ e npm.
 
 ```bash
-git clone https://github.com/EDLS08/Projeto-JavaScript.git
-cd Projeto-JavaScript
-npm ci
-npm start
+npm ci        # instala exatamente o que está no package-lock.json
+npm start     # = ng serve → abra http://localhost:4200
 ```
 
-A aplicação ficará disponível em http://localhost:4200.
+Abra por **localhost** (ou https): o login usa a Web Crypto API, que o navegador só libera nesses contextos.
 
-## Scripts
+Outros comandos: `npm run build` (produção, saída em `dist/`) e `npm test` (Karma + Chrome).
 
-| Comando | Descrição |
-|---|---|
-| `npm start` | Inicia o servidor de desenvolvimento |
-| `npm run build` | Gera a versão de produção em `dist/` |
-| `npm run watch` | Compila continuamente em modo de desenvolvimento |
-| `npm test` | Executa os testes configurados pelo Angular/Karma |
+Telas testadas em 360×800, 390×844, 768×1024, 1366×768, 1920×1080 e 2560×1080, nos temas claro e escuro.
 
-## Estrutura do projeto
+## Como os dados são guardados
 
-```text
-src/
-├── app/
-│   ├── guards/          Proteção de rotas
-│   ├── models/          Interfaces e tipos
-│   ├── services/        Autenticação, notas, imagens, tema e armazenamento
-│   ├── shared/          Componentes e utilitários compartilhados
-│   ├── testing/         Apoio aos testes
-│   └── user-module/     Login, cadastro e painel de notas
-├── index.html
-├── main.ts
-└── styles.css
-public/                  Ícones e recursos estáticos
-docs/                    Relatório técnico e roteiro de apresentação
-.github/workflows/       Automação de integração contínua
+| O quê | Onde | Chave / banco |
+|---|---|---|
+| Usuários (senha como hash PBKDF2-SHA256 + salt) | localStorage | `plume-notes:usuarios` |
+| Sessão (id do usuário logado) | localStorage | `plume-notes:sessao` |
+| Notas de todos os usuários (cada uma com `usuarioId`) | localStorage | `plume-notes:notas` |
+| Tema | localStorage | `plume-notes:tema` |
+| Imagens (original + recorte, como Blob) | IndexedDB | banco `plume-notes`, store `imagens` |
+
+Para "zerar" o app: DevTools → Application → Clear site data.
+
+> A autenticação é **demonstrativa**: roda no navegador e qualquer pessoa com DevTools pode alterar os dados.
+> Ela não guarda senha em texto puro e separa as contas, mas não é um sistema seguro de produção.
+
+## Estrutura
+
+```
+src/app/
+├── models/models.ts            interfaces (IUsuario, INota, IImagemRef...)
+├── services/
+│   ├── auth.service.ts         cadastro, login, logout, sessão (hash com Web Crypto)
+│   ├── notas.service.ts        CRUD de notas; toda operação é restrita ao usuário atual
+│   ├── imagens.service.ts      IndexedDB: salva/lê/remove imagens; respeita o dono
+│   ├── theme.service.ts        único estado claro/escuro (classe dark-mode no <body>)
+│   └── armazenamento.ts        helpers de localStorage + gerador de id
+├── guards/auth.guard.ts        authGuard (rotas privadas) e guestGuard (login/cadastro)
+├── shared/
+│   ├── theme-toggle.ts         botão de tema (login e cadastro)
+│   └── imagem.utils.ts         validação de arquivo (tipo/tamanho) e proporção
+├── user-module/
+│   ├── tela-login-notes/       tela de login
+│   ├── new-user-notes/         tela de cadastro
+│   └── all-notes/              painel: lista, busca, tags, formulário, cropper
+├── testing/helpers.ts          apoio aos testes
+└── app.routes.ts / app.config.ts / app.ts
 ```
 
-## Armazenamento e privacidade
+Rotas: `/login` · `/new-user-notes` (cadastro) · `/all-notes` (protegida). Qualquer outra rota volta para `/login`;
+quem já está logado é levado direto para `/all-notes`.
 
-| Dados | Armazenamento |
-|---|---|
-| Contas locais e hashes de senha | localStorage |
-| Identificador da sessão | localStorage |
-| Notas | localStorage |
-| Preferência de tema | localStorage |
-| Imagens originais e recortadas | IndexedDB |
+## Imagens
 
-As senhas não são armazenadas em texto puro: o projeto deriva hashes usando PBKDF2-SHA256 com salt. Isso **não transforma a autenticação local em segurança de produção**. Sem um servidor confiável, o usuário pode modificar os dados no próprio navegador. Não utilize senhas reais ou informações sensíveis neste projeto.
+1. O usuário escolhe um arquivo (JPG, PNG, WEBP ou GIF, até 5 MB) — ou cola uma URL, que é baixada e tratada como arquivo local.
+2. O `ngx-image-cropper` mostra o recorte; ao salvar a nota, o app guarda no IndexedDB a **imagem original** e o **recorte final** (JPEG, até 1280 px de largura).
+3. As telas exibem o recorte em um `<img>` com `object-fit: cover`; a nota guarda só `{ id, ar }` (id da imagem e proporção).
+4. Ao editar, dá para **Ajustar recorte** (reabre o original), **Substituir** ou **Remover** a imagem.
 
-Para apagar os dados locais, use as ferramentas do navegador: **Application → Storage → Clear site data**.
+URLs de sites que não liberam CORS não podem ser baixadas pelo navegador (restrição de segurança que o front-end não contorna); nesse caso o app explica, oferece abrir a imagem em outra aba e sugere salvá-la e escolhê-la do computador. O app confere o conteúdo real do arquivo (não só a extensão).
 
-## Imagens e CORS
+## Tema e layout
 
-O aplicativo valida o conteúdo real dos arquivos de imagem e limita o tamanho aceito. Imagens hospedadas em servidores que não autorizam CORS podem não ser importadas diretamente por URL; nesse caso, salve o arquivo e selecione-o no dispositivo.
+- Cores de login/cadastro: variáveis `--auth-*` em `src/styles.css` (claro em `:root`, escuro em `body.dark-mode`). O `ThemeService` só liga/desliga a classe `dark-mode` no `<body>`.
+- Painel: no desktop ocupa a janela inteira e só as colunas rolam; no tablet/celular vira uma coluna com barra inferior, botão flutuante e editor em tela cheia.
+- Orçamento de CSS por componente em `angular.json`: aviso 30 kB / erro 50 kB (o `all-notes.css` tem ≈21 kB). Se uma folha de estilo passar do limite, é só aumentar `anyComponentStyle` ali.
 
-## Testes e validação
-
-O projeto inclui testes unitários para serviços, componentes, utilitários e guards. As verificações devem ser executadas no ambiente local e na integração contínua antes de cada publicação.
-
-## Documentação
-
-- [Instruções do projeto para GitHub Copilot](.github/copilot-instructions.md)
-
-## Deploy
-
-O arquivo `vercel.json` contém o rewrite necessário para o roteamento da aplicação Angular em hospedagens Vercel. Configure o comando de build como `npm run build` e o diretório de saída conforme o artefato gerado pela versão instalada do Angular CLI.
-
-## Licença
-
-Nenhuma licença foi declarada neste repositório. Até que uma licença seja adicionada, não presuma permissão para reutilizar, modificar ou redistribuir o código.
+Mais detalhes (testes, roteiro de apresentação, requisitos do professor): [docs/RELATORIO.md](docs/RELATORIO.md) · capturas em [docs/capturas](docs/capturas) · testes de navegador em [docs/testes-no-navegador](docs/testes-no-navegador).
